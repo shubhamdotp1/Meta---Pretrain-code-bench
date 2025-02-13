@@ -1,0 +1,22 @@
+{
+  "name": "updated-test-runner",
+  "version": "1.0.0",
+  "description": "This guide will help you set up and run tests for the JavaScript tasks using Jest and the Test Runner.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test-all": "node test-runner.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "crypto": "^1.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.24.1"
+  }
+}
