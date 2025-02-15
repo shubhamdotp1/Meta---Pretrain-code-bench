@@ -74,7 +74,6 @@ async function runTests(taskId) {
 
         if (enableCoverage) {
             command += `  --coverage --coverageDirectory=\"${coverageDir}\"`
-            console.log("The command: ", command)
         }
 
         try {
