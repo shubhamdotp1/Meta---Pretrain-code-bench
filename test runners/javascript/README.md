@@ -1,6 +1,9 @@
 # Task Testing Guide
 This guide will help you set up and run tests for the JavaScript tasks using Jest.
 
+# Test Runner V1
+This is the original test runner
+
 ## Prerequisites
 - Node.js (Latest LTS version recommended)
   ```bash
@@ -154,3 +157,55 @@ If you encounter any issues:
    - The test file has a proper require statement
    - All implementation files export the same function name
    - Files in alternate_responses have .js extension
+
+# Test Runner V2
+This is the improved test runner version.
+Improvement compared to the original version includes:
+- Simpler folder structure. Just like the python runner, you only need to put  the model files, like `model_A.js`, `model_B.js`... in a folder (preferably the task ID folder), and execute the rest runner file. There is no need for `base_code.js`, `solution.js`, `alternate_response` folder.
+- Export test results to a `.md` file, which allow you to copy the result with a single click when you have an IDE.
+
+## Prerequisites & Setup Instructions
+Similar to `Test Runner V1`
+
+## Project Structure
+Your project should follow this structure:
+```
+tasks/
+├── node_modules/
+├── package.json
+├── package-lock.json
+├── README.md
+├── test-runner-v2.js
+├── task1/
+│   ├── index.test.js
+│   ├── model_A.js
+│   ├── model_B.js
+│   ├── model_C.js
+
+```
+
+## Running The Test Runner
+
+The test runner allows you to run tests against multiple implementations of a solution and automatically generate markdown files consisting of test results.
+
+For example, with the above folder structure, the command to generate the test should be
+
+```bash
+node test-runner-v2.js task1
+```
+
+The parameter `task1` is optional. If not presence, it will search for the file `.env` for the environmen variable `WORKING_TASK`, if not found, it search in the file `env`, if not found then it will try to call the process environment variable. Only after that, if a value is still not found, and error will occur.
+
+The command will:
+1. Run tests against all `.js` file in the provided folder
+2. Output the result in the `report_results` folder
+3. Generate a summary showing pass/fail status for each implementation
+4. Save a test summary file (like `task1-test-summary.txt`)
+
+## Additional Options
+- **Coverage**: To output coverage information in the `report_results` folder, you can add `-c` or `--coverage`
+  ```bash
+  node test-runner-v2.js -c
+  ```
+## Bug Fix And Other Issues
+If there is any issue with the `test-runner-v2.js`, feel free to contact me through the account `cuong.h@turing.com`, and I will response
