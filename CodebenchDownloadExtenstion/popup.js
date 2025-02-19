@@ -1,9 +1,17 @@
+// At the beginning of the file, add this with the other event listeners
 document.addEventListener('DOMContentLoaded', () => {
-    chrome.storage.local.get(['savePath'], (result) => {
+    chrome.storage.local.get(['savePath', 'avoidSmartScreen'], (result) => {
         if (result.savePath) {
             document.getElementById('savePath').value = result.savePath;
         }
+        if (result.avoidSmartScreen !== undefined) {
+            document.getElementById('avoidSmartScreen').checked = result.avoidSmartScreen;
+        }
     });
+});
+
+document.getElementById('avoidSmartScreen').addEventListener('change', (e) => {
+    chrome.storage.local.set({avoidSmartScreen: e.target.value});
 });
 
 document.getElementById('savePath').addEventListener('change', (e) => {
@@ -139,6 +147,7 @@ function extractCodeSnippets() {
                     /```node\n([\s\S]*?)\n```/g
                 ],
                 extension: '.js',
+                altExtension: '.jsx',  // Add this line
                 defaultContent: "// Hello World\nconsole.log(\"Hello, World!\");",
                 commentPrefix: '//'
             },
@@ -150,6 +159,7 @@ function extractCodeSnippets() {
                     /```py\n([\s\S]*?)\n```/g
                 ],
                 extension: '.py',
+                altExtension: '.pyx',  // Add this line
                 defaultContent: "# Hello World\nprint(\"Hello, World!\")",
                 commentPrefix: '#'
             },
@@ -160,6 +170,7 @@ function extractCodeSnippets() {
                     /```c\+\+\n([\s\S]*?)\n```/g
                 ],
                 extension: '.cpp',
+                altExtension: '.cppx',  // Add this line
                 defaultContent: "// Hello World\n#include <iostream>\n\nint main() {\n    std::cout << \"Hello, World!\" << std::endl;\n    return 0;\n}",
                 commentPrefix: '//'
             },
@@ -169,11 +180,11 @@ function extractCodeSnippets() {
                     /```java\n([\s\S]*?)\n```/g
                 ],
                 extension: '.java',
+                altExtension: '.javax',  // Add this line
                 defaultContent: "// Hello World\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, World!\");\n    }\n}",
                 commentPrefix: '//'
             }
         };
-
 
         // Extract task ID from URL
         const taskId = (() => {
@@ -266,6 +277,10 @@ function extractCodeSnippets() {
         let fileCounter = 0;
 
 
+        const avoidSmartScreen = document.getElementById('avoidSmartScreen').checked;
+        const fileExtension = avoidSmartScreen ? language.altExtension : language.extension;
+
+
         responses.forEach((response, responseIndex) => {
             const rawHtml = response.innerHTML;
 
@@ -298,17 +313,18 @@ function extractCodeSnippets() {
 
             // Take only the last match from this response
             const modelLetter = String.fromCharCode(65 + responseIndex);
+
             if (matches.length > 0) {
                 const lastMatch = matches[matches.length - 1];
                 snippets.push({
                     content: lastMatch.content,
-                    fileName: `model_${modelLetter}${language.extension}`
+                    fileName: `model_${modelLetter}${fileExtension}`
                 });
             } else {
                 // If no code found in this response, push empty content
                 snippets.push({
-                    content: '',
-                    fileName: `model_${modelLetter}${language.extension}`
+                    content: language.defaultContent,
+                    fileName: `model_${modelLetter}${fileExtension}`
                 });
             }
 
@@ -330,7 +346,7 @@ function extractCodeSnippets() {
         if (snippets.length === 3) {
             snippets.push({
                 content: language.defaultContent,
-                fileName: `model_0${language.extension}`
+                fileName: `model_0${fileExtension}`
             });
         }
 

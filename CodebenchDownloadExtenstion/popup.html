@@ -18,6 +18,15 @@
             padding: 5px;
             margin-bottom: 10px;
         }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .checkbox-group label {
+            margin-left: 8px;
+            margin-bottom: 0;
+        }
         button {
             width: 100%;
             padding: 8px;
@@ -41,6 +50,10 @@
 <div class="input-group">
     <label for="savePath">Save Location:</label>
     <input type="text" id="savePath" placeholder="e.g., Downloads/code_snippets">
+</div>
+<div class="checkbox-group">
+    <input type="checkbox" id="avoidSmartScreen">
+    <label for="avoidSmartScreen">Modify extensions to avoid SmartScreen block on Windows</label>
 </div>
 <button id="extractBtn">Extract Code Snippets</button>
 <div id="status"></div>
