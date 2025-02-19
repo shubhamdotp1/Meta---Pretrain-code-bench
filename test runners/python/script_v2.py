@@ -26,7 +26,7 @@ def setup_parser() -> argparse.ArgumentParser:
 
 
 def convert_pyx_to_py(folder: str) -> List[str]:
-    """Convert .pyx files to .py files and return list of converted files."""
+    """Convert .pyx files to .py files by renaming and return list of converted files."""
     converted_files = []
 
     # Find all .pyx files
@@ -41,25 +41,12 @@ def convert_pyx_to_py(folder: str) -> List[str]:
                 print(f"Removing existing file: {base_name}.py")
                 os.remove(py_path)
 
-            # Copy content to new .py file
-            with open(pyx_path, 'r', encoding='utf-8') as pyx_file:
-                content = pyx_file.read()
-                with open(py_path, 'w', encoding='utf-8') as py_file:
-                    py_file.write(content)
-
-            print(f"Converted {file} to {base_name}.py")
+            # Rename .pyx to .py
+            print(f"Converting {file} to {base_name}.py")
+            os.rename(pyx_path, py_path)
             converted_files.append(base_name)
 
     return converted_files
-
-
-def cleanup_converted_files(folder: str, converted_files: List[str]) -> None:
-    """Clean up the converted .py files."""
-    for base_name in converted_files:
-        py_path = os.path.join(folder, f"{base_name}.py")
-        if os.path.exists(py_path):
-            print(f"Cleaning up converted file: {base_name}.py")
-            os.remove(py_path)
 
 
 def get_working_task() -> str:
@@ -108,26 +95,30 @@ def run_tests_with_coverage(
         script_path: str, test_path: str, verbose: bool
 ) -> Tuple[bool, str, str]:
     """
-Run pytest with coverage on the specified files.
+    Run pytest with coverage on the specified files.
     """
     script_dir = os.path.dirname(script_path)
 
     # Add script directory to PYTHONPATH
     env = os.environ.copy()
+    python_path = script_dir
     if "PYTHONPATH" in env:
-        env["PYTHONPATH"] = f"{script_dir}:{env['PYTHONPATH']}"
-    else:
-        env["PYTHONPATH"] = script_dir
+        # Use OS-appropriate path separator
+        python_path = f"{script_dir}{os.pathsep}{env['PYTHONPATH']}"
+    env["PYTHONPATH"] = python_path
 
     # Configure pytest arguments based on verbosity
     pytest_args = ["-v", "--color=no"]
     if not verbose:
         pytest_args.extend(["--tb=no", "-ra"])
 
+    # Use python -m coverage instead of direct coverage command
+    coverage_command = [sys.executable, "-m", "coverage"]
+
     # Run tests with coverage
     try:
         test_output = subprocess.run(
-            ["coverage", "run", "-m", "pytest", test_path] + pytest_args,
+            [*coverage_command, "run", "-m", "pytest", test_path] + pytest_args,
             capture_output=True,
             text=True,
             check=False,
@@ -139,7 +130,10 @@ Run pytest with coverage on the specified files.
     # Generate coverage report
     try:
         coverage_output = subprocess.run(
-            ["coverage", "report", "-m"], capture_output=True, text=True, check=False
+            [*coverage_command, "report", "-m"],
+            capture_output=True,
+            text=True,
+            check=False
         )
     except subprocess.CalledProcessError as e:
         return False, test_output.stdout, f"Error generating coverage report: {str(e)}"
@@ -199,9 +193,8 @@ def main():
     try:
         for script_path in python_files:
             process_script(script_path, folder, report_folder, args.verbose)
-    finally:
-        # Clean up converted files after tests are complete
-        cleanup_converted_files(folder, converted_files)
+    except Exception as e:
+        print("An error occurred: ", e)
 
     print(f"\nAll reports generated in: {report_folder}")
 

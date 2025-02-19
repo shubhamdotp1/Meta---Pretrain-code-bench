@@ -338,31 +338,36 @@ function writeToReport(taskId, filename, content) {
 }
 
 function convertJsxToJs(directoryPath) {
+    // Will store list of converted files
+    const convertedFiles = [];
+
     try {
         const files = fs.readdirSync(directoryPath);
+        
+        // Find and process all jsx files
+        for (const file of files) {
+            if (file.endsWith('.jsx')) {
+                const baseName = path.basename(file, '.jsx');
+                const jsxPath = path.join(directoryPath, file);
+                const jsPath = path.join(directoryPath, `${baseName}.js`);
 
-        // Find all jsx files
-        const jsxFiles = files.filter(file => path.extname(file) === '.jsx');
+                // Remove existing .js file if it exists
+                if (fs.existsSync(jsPath)) {
+                    console.log(`Removing existing file: ${baseName}.js`);
+                    fs.unlinkSync(jsPath);
+                }
 
-        for (const jsxFile of jsxFiles) {
-            const baseName = path.basename(jsxFile, '.jsx');
-            const jsFile = `${baseName}.js`;
-            const jsxPath = path.join(directoryPath, jsxFile);
-            const jsPath = path.join(directoryPath, jsFile);
-
-            // If a .js version already exists, remove it
-            if (fs.existsSync(jsPath)) {
-                console.log(`Removing existing file: ${jsFile}`);
-                fs.unlinkSync(jsPath);
+                // Rename .jsx to .js
+                console.log(`Converting ${file} to ${baseName}.js`);
+                fs.renameSync(jsxPath, jsPath);
+                convertedFiles.push(baseName);
             }
-
-            // Read jsx content and write to js file
-            const content = fs.readFileSync(jsxPath, 'utf8');
-            fs.writeFileSync(jsPath, content);
-
-            console.log(`Converted ${jsxFile} to ${jsFile}`);
         }
+
+        return convertedFiles;
+
     } catch (error) {
         console.error('Error converting JSX files:', error);
+        return convertedFiles;
     }
 }

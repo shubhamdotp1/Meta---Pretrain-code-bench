@@ -8,19 +8,23 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('avoidSmartScreen').checked = result.avoidSmartScreen;
         }
     });
+	
+	// Add event listeners
+    const checkbox = document.getElementById('avoidSmartScreen');
+    checkbox.addEventListener('change', (e) => {
+        chrome.storage.local.set({avoidSmartScreen: e.target.checked}); // Note: changed from e.target.value to e.target.checked
+    });
+
+    document.getElementById('savePath').addEventListener('change', (e) => {
+        chrome.storage.local.set({savePath: e.target.value});
+    });
 });
 
-document.getElementById('avoidSmartScreen').addEventListener('change', (e) => {
-    chrome.storage.local.set({avoidSmartScreen: e.target.value});
-});
-
-document.getElementById('savePath').addEventListener('change', (e) => {
-    chrome.storage.local.set({savePath: e.target.value});
-});
 
 document.getElementById('extractBtn').addEventListener('click', async function () {
     const status = document.getElementById('status');
     const savePath = document.getElementById('savePath').value;
+	const avoidSmartScreen = document.getElementById('avoidSmartScreen').checked; 
 
     if (!savePath) {
         status.innerHTML = 'Error: Please enter a save location';
@@ -33,7 +37,8 @@ document.getElementById('extractBtn').addEventListener('click', async function (
         const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
         const results = await chrome.scripting.executeScript({
             target: {tabId: tab.id},
-            function: extractCodeSnippets
+            function: extractCodeSnippets,
+			args: [avoidSmartScreen]  // Pass the checkbox state as an argument
         });
 
         const result = results[0].result;
@@ -49,7 +54,8 @@ document.getElementById('extractBtn').addEventListener('click', async function (
 
         status.innerHTML += `<br>Found ${result.responsesFound} responses`;
         status.innerHTML += `<br>Found ${result.codeBlocksFound} code blocks`;
-        status.innerHTML += `<br>Task ID: ${result.taskId}`;
+        status.innerHTML += `<br>Extension: ${result.ext}`;
+		status.innerHTML += `<br>Task ID: ${result.taskId}`;
 
         if (result.codeBlocksFound > 0) {
             const save_path_with_language = `${savePath}/${result.language}`;
@@ -89,11 +95,16 @@ document.getElementById('extractBtn').addEventListener('click', async function (
             // Save code snippets
             for (const snippet of result.snippets) {
                 const mimeTypes = {
-                    '.js': 'application/javascript',
-                    '.py': 'text/x-python',
-                    '.cpp': 'text/x-c',
-                    '.java': 'text/x-java'
-                };
+					'.js': 'application/javascript',
+					'.py': 'text/x-python',
+					'.cpp': 'text/x-c',
+					'.java': 'text/x-java',
+					// Add the alternative extensions
+					'.jsx': 'application/javascript',
+					'.pyx': 'text/x-python',
+					'.cppx': 'text/x-c',
+					'.javax': 'text/x-java'
+				};
 
                 const extension = snippet.fileName.split('.').pop();
                 const mimeType = mimeTypes['.' + extension] || 'text/plain';
@@ -133,7 +144,7 @@ document.getElementById('extractBtn').addEventListener('click', async function (
     }
 });
 
-function extractCodeSnippets() {
+function extractCodeSnippets(avoidSmartScreen) {
     try {
         // Language definitions
         const languages = {
@@ -277,9 +288,8 @@ function extractCodeSnippets() {
         let fileCounter = 0;
 
 
-        const avoidSmartScreen = document.getElementById('avoidSmartScreen').checked;
-        const fileExtension = avoidSmartScreen ? language.altExtension : language.extension;
-
+		const fileExtension = avoidSmartScreen ? language.altExtension : language.extension;
+	
 
         responses.forEach((response, responseIndex) => {
             const rawHtml = response.innerHTML;
@@ -341,18 +351,21 @@ function extractCodeSnippets() {
         if (snippets.length > 3) {
             snippets = snippets.slice(0, 3);
         }
-
-        // Add default content only if we have exactly 3 snippets
-        if (snippets.length === 3) {
-            snippets.push({
-                content: language.defaultContent,
-                fileName: `model_0${fileExtension}`
-            });
-        }
+		
+		if (!avoidSmartScreen){
+			// Add default content only if we have exactly 3 snippets
+			if (snippets.length === 3) {
+				snippets.push({
+					content: language.defaultContent,
+					fileName: `model_0${fileExtension}`
+				});
+			}
+		}
 
         return {
             taskId: taskId,
             language: programmingLanguage,
+			ext: fileExtension,
             responsesFound: responses.length,
             codeBlocksFound: totalCodeBlocks,
             snippets: snippets
