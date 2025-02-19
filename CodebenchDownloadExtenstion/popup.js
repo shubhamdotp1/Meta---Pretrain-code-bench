@@ -321,13 +321,17 @@ function extractCodeSnippets(avoidSmartScreen) {
                 }));
             }
 
-            // Take only the last match from this response
+
             const modelLetter = String.fromCharCode(65 + responseIndex);
 
             if (matches.length > 0) {
-                const lastMatch = matches[matches.length - 1];
+                // Find the match with the longest content
+                const longestMatch = matches.reduce((longest, current) =>
+                        current.content.length > longest.content.length ? current : longest
+                    , matches[0]);
+
                 snippets.push({
-                    content: lastMatch.content,
+                    content: longestMatch.content,
                     fileName: `model_${modelLetter}${fileExtension}`
                 });
             } else {
