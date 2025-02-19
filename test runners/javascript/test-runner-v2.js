@@ -68,14 +68,16 @@ async function runTests(taskId) {
         log.addDivisor();
 
 
-        let testResults;
+        const normalizedTestPath = testFilePath.split(path.sep).join('/');
 
-        let command = `npx jest ${testFilePath} --json --colors`
+        let command = `npx jest ${normalizedTestPath} --json --colors`;
 
         if (enableCoverage) {
-            command += `  --coverage --coverageDirectory=\"${coverageDir}\"`
+            // For coverage directory, also normalize the path
+            const normalizedCoverageDir = coverageDir.split(path.sep).join('/');
+            command += ` --coverage --coverageDirectory="${normalizedCoverageDir}"`;
         }
-
+        
         try {
             const output = execSync(command, {
                 encoding: 'utf8',
@@ -210,6 +212,9 @@ runTests(taskId).catch(error => {
 function getAllJsFiles(directoryPath, exemptionFiles = []) {
     try {
         // Read all files in directory
+        convertJsxToJs(directoryPath);
+
+        // Read all files in directory
         const files = fs.readdirSync(directoryPath);
 
         // Filter for .js files and exclude exempted files
@@ -332,3 +337,32 @@ function writeToReport(taskId, filename, content) {
     fs.writeFileSync(reportPath, formattedContent + '\n\n');
 }
 
+function convertJsxToJs(directoryPath) {
+    try {
+        const files = fs.readdirSync(directoryPath);
+
+        // Find all jsx files
+        const jsxFiles = files.filter(file => path.extname(file) === '.jsx');
+
+        for (const jsxFile of jsxFiles) {
+            const baseName = path.basename(jsxFile, '.jsx');
+            const jsFile = `${baseName}.js`;
+            const jsxPath = path.join(directoryPath, jsxFile);
+            const jsPath = path.join(directoryPath, jsFile);
+
+            // If a .js version already exists, remove it
+            if (fs.existsSync(jsPath)) {
+                console.log(`Removing existing file: ${jsFile}`);
+                fs.unlinkSync(jsPath);
+            }
+
+            // Read jsx content and write to js file
+            const content = fs.readFileSync(jsxPath, 'utf8');
+            fs.writeFileSync(jsPath, content);
+
+            console.log(`Converted ${jsxFile} to ${jsFile}`);
+        }
+    } catch (error) {
+        console.error('Error converting JSX files:', error);
+    }
+}
