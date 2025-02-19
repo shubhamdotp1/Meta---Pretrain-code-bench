@@ -343,12 +343,13 @@ function convertJsxToJs(directoryPath) {
 
     try {
         const files = fs.readdirSync(directoryPath);
-        
-        // Find and process all jsx files
+
+        // Find and process all jsx and txt files
         for (const file of files) {
             if (file.endsWith('.jsx') || file.endsWith('.txt')) {
-                const baseName = path.basename(file, '.jsx');
-                const jsxPath = path.join(directoryPath, file);
+                // Get base name without any extension
+                const baseName = path.basename(file, path.extname(file));
+                const originalPath = path.join(directoryPath, file);
                 const jsPath = path.join(directoryPath, `${baseName}.js`);
 
                 // Remove existing .js file if it exists
@@ -357,9 +358,9 @@ function convertJsxToJs(directoryPath) {
                     fs.unlinkSync(jsPath);
                 }
 
-                // Rename .jsx to .js
+                // Rename file to .js
                 console.log(`Converting ${file} to ${baseName}.js`);
-                fs.renameSync(jsxPath, jsPath);
+                fs.renameSync(originalPath, jsPath);
                 convertedFiles.push(baseName);
             }
         }
@@ -367,7 +368,7 @@ function convertJsxToJs(directoryPath) {
         return convertedFiles;
 
     } catch (error) {
-        console.error('Error converting JSX files:', error);
+        console.error('Error converting files to JS:', error);
         return convertedFiles;
     }
 }
