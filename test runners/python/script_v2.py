@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import platform
 import sys
 import subprocess
 import os
@@ -31,7 +32,7 @@ def convert_pyx_to_py(folder: str) -> List[str]:
 
     # Find all .pyx files
     for file in os.listdir(folder):
-        if file.endswith('.pyx'):
+        if file.endswith('.pyx') or file.endswith('.txt'):
             base_name = os.path.splitext(file)[0]
             pyx_path = os.path.join(folder, file)
             py_path = os.path.join(folder, f"{base_name}.py")
@@ -112,8 +113,18 @@ def run_tests_with_coverage(
     if not verbose:
         pytest_args.extend(["--tb=no", "-ra"])
 
-    # Use python -m coverage instead of direct coverage command
-    coverage_command = [sys.executable, "-m", "coverage"]
+    # Determine coverage command based on OS
+    if platform.system().lower() == 'darwin':  # macOS
+        try:
+            # Try to find coverage in PATH
+            subprocess.run(['which', 'coverage'], check=True, capture_output=True)
+            coverage_command = ['coverage']
+        except subprocess.CalledProcessError:
+            # Fall back to python -m coverage
+            coverage_command = [sys.executable, "-m", "coverage"]
+    else:
+        # For Windows and Linux, use python -m coverage
+        coverage_command = [sys.executable, "-m", "coverage"]
 
     # Run tests with coverage
     try:

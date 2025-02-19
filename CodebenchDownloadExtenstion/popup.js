@@ -99,11 +99,11 @@ document.getElementById('extractBtn').addEventListener('click', async function (
 					'.py': 'text/x-python',
 					'.cpp': 'text/x-c',
 					'.java': 'text/x-java',
-					// Add the alternative extensions
-					'.jsx': 'application/javascript',
-					'.pyx': 'text/x-python',
-					'.cppx': 'text/x-c',
-					'.javax': 'text/x-java'
+					// // Add the alternative extensions
+					// '.jsx': 'application/javascript',
+					// '.pyx': 'text/x-python',
+					// '.cppx': 'text/x-c',
+					// '.javax': 'text/x-java'
 				};
 
                 const extension = snippet.fileName.split('.').pop();

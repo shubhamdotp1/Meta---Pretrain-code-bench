@@ -346,7 +346,7 @@ function convertJsxToJs(directoryPath) {
         
         // Find and process all jsx files
         for (const file of files) {
-            if (file.endsWith('.jsx')) {
+            if (file.endsWith('.jsx') || file.endsWith('.txt')) {
                 const baseName = path.basename(file, '.jsx');
                 const jsxPath = path.join(directoryPath, file);
                 const jsPath = path.join(directoryPath, `${baseName}.js`);
