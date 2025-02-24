@@ -68,14 +68,16 @@ async function runTests(taskId) {
         log.addDivisor();
 
 
-        let testResults;
+        const normalizedTestPath = testFilePath.split(path.sep).join('/');
 
-        let command = `npx jest ${testFilePath} --json --colors`
+        let command = `npx jest ${normalizedTestPath} --json --colors`;
 
         if (enableCoverage) {
-            command += `  --coverage --coverageDirectory=\"${coverageDir}\"`
+            // For coverage directory, also normalize the path
+            const normalizedCoverageDir = coverageDir.split(path.sep).join('/');
+            command += ` --coverage --coverageDirectory="${normalizedCoverageDir}"`;
         }
-
+        
         try {
             const output = execSync(command, {
                 encoding: 'utf8',
@@ -210,6 +212,9 @@ runTests(taskId).catch(error => {
 function getAllJsFiles(directoryPath, exemptionFiles = []) {
     try {
         // Read all files in directory
+        convertJsxToJs(directoryPath);
+
+        // Read all files in directory
         const files = fs.readdirSync(directoryPath);
 
         // Filter for .js files and exclude exempted files
@@ -332,3 +337,38 @@ function writeToReport(taskId, filename, content) {
     fs.writeFileSync(reportPath, formattedContent + '\n\n');
 }
 
+function convertJsxToJs(directoryPath) {
+    // Will store list of converted files
+    const convertedFiles = [];
+
+    try {
+        const files = fs.readdirSync(directoryPath);
+
+        // Find and process all jsx and txt files
+        for (const file of files) {
+            if (file.endsWith('.jsx') || file.endsWith('.txt')) {
+                // Get base name without any extension
+                const baseName = path.basename(file, path.extname(file));
+                const originalPath = path.join(directoryPath, file);
+                const jsPath = path.join(directoryPath, `${baseName}.js`);
+
+                // Remove existing .js file if it exists
+                if (fs.existsSync(jsPath)) {
+                    console.log(`Removing existing file: ${baseName}.js`);
+                    fs.unlinkSync(jsPath);
+                }
+
+                // Rename file to .js
+                console.log(`Converting ${file} to ${baseName}.js`);
+                fs.renameSync(originalPath, jsPath);
+                convertedFiles.push(baseName);
+            }
+        }
+
+        return convertedFiles;
+
+    } catch (error) {
+        console.error('Error converting files to JS:', error);
+        return convertedFiles;
+    }
+}
