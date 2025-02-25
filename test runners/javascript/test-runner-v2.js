@@ -77,7 +77,7 @@ async function runTests(taskId) {
             const normalizedCoverageDir = coverageDir.split(path.sep).join('/');
             command += ` --coverage --coverageDirectory="${normalizedCoverageDir}"`;
         }
-        
+
         try {
             const output = execSync(command, {
                 encoding: 'utf8',
@@ -344,12 +344,11 @@ function convertJsxToJs(directoryPath) {
     try {
         const files = fs.readdirSync(directoryPath);
 
-        // Find and process all jsx and txt files
+        // Find and process all jsx files
         for (const file of files) {
             if (file.endsWith('.jsx') || file.endsWith('.txt')) {
-                // Get base name without any extension
-                const baseName = path.basename(file, path.extname(file));
-                const originalPath = path.join(directoryPath, file);
+                const baseName = path.basename(file, '.jsx');
+                const jsxPath = path.join(directoryPath, file);
                 const jsPath = path.join(directoryPath, `${baseName}.js`);
 
                 // Remove existing .js file if it exists
@@ -358,9 +357,9 @@ function convertJsxToJs(directoryPath) {
                     fs.unlinkSync(jsPath);
                 }
 
-                // Rename file to .js
+                // Rename .jsx to .js
                 console.log(`Converting ${file} to ${baseName}.js`);
-                fs.renameSync(originalPath, jsPath);
+                fs.renameSync(jsxPath, jsPath);
                 convertedFiles.push(baseName);
             }
         }
@@ -368,7 +367,7 @@ function convertJsxToJs(directoryPath) {
         return convertedFiles;
 
     } catch (error) {
-        console.error('Error converting files to JS:', error);
+        console.error('Error converting JSX files:', error);
         return convertedFiles;
     }
 }
