@@ -21,17 +21,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-document.getElementById('copyFullTracePromptA').addEventListener('click', async (e) => {
-    await copyPromptToClipboard(1, false);
-})
-
-document.getElementById('copyFullTracePromptB').addEventListener('click', async (e) => {
-    await copyPromptToClipboard(2, false);
-})
-
-document.getElementById('copyFullTracePromptC').addEventListener('click', async (e) => {
-    await copyPromptToClipboard(3, false);
-})
+// document.getElementById('copyFullTracePromptA').addEventListener('click', async (e) => {
+//     await copyPromptToClipboard(1, false);
+// })
+//
+// document.getElementById('copyFullTracePromptB').addEventListener('click', async (e) => {
+//     await copyPromptToClipboard(2, false);
+// })
+//
+// document.getElementById('copyFullTracePromptC').addEventListener('click', async (e) => {
+//     await copyPromptToClipboard(3, false);
+// })
 
 document.getElementById('copyShortenTracePromptA').addEventListener('click', async (e) => {
     await copyPromptToClipboard(1, true);
@@ -171,6 +171,24 @@ document.getElementById('extractBtn').addEventListener('click', async function (
 
 function extractCodeSnippets(avoidSmartScreen) {
     try {
+
+        function extractBetweenSeparators(inputString, separator = '-', minLength = 5) {
+            if (!inputString || typeof inputString !== 'string') {
+                return [];
+            }
+
+            // Create a regex pattern for finding long sequences of the separator
+            const separatorPattern = new RegExp(`[${separator}]{${minLength},}`, 'g');
+
+            // Split the string by the separator pattern
+            const segments = inputString.split(separatorPattern);
+
+            // Filter out empty segments and trim whitespace
+            return segments
+                .filter(segment => segment.trim().length > 0)
+                .map(segment => segment.trim());
+        }
+
         // Language definitions
         const languages = {
             javascript: {
@@ -317,33 +335,62 @@ function extractCodeSnippets(avoidSmartScreen) {
 	
 
         responses.forEach((response, responseIndex) => {
-            const rawHtml = response.innerHTML;
-
-            const decodeHTML = (html) => {
-                const txt = document.createElement('textarea');
-                txt.innerHTML = html;
-                return txt.value;
-            };
-
-            const decodedHtml = decodeHTML(rawHtml);
-
-            // Try to find code blocks with language marker
             let matches = [];
-            for (const regex of language.regexes) {
-                const currentMatches = [...decodedHtml.matchAll(regex)].map(m => ({
-                    content: m[1],
-                    isTyped: true
-                }));
-                matches = matches.concat(currentMatches);
-            }
+            if (responseIndex !== 2) {
+                const rawHtml = response.innerHTML;
 
-            // If no typed blocks found, try generic blocks
-            if (matches.length === 0) {
-                const genericRegex = /```\n([\s\S]*?)\n```/g;
-                matches = [...decodedHtml.matchAll(genericRegex)].map(m => ({
-                    content: m[1],
-                    isTyped: false
-                }));
+                const decodeHTML = (html) => {
+                    const txt = document.createElement('textarea');
+                    txt.innerHTML = html;
+                    return txt.value;
+                };
+
+                const decodedHtml = decodeHTML(rawHtml);
+
+                // Try to find code blocks with language marker
+                for (const regex of language.regexes) {
+                    const currentMatches = [...decodedHtml.matchAll(regex)].map(m => ({
+                        content: m[1],
+                        isTyped: true
+                    }));
+                    matches = matches.concat(currentMatches);
+                }
+
+                // If no typed blocks found, try generic blocks
+                if (matches.length === 0) {
+                    const genericRegex = /```\n([\s\S]*?)\n```/g;
+                    matches = [...decodedHtml.matchAll(genericRegex)].map(m => ({
+                        content: m[1],
+                        isTyped: false
+                    }));
+                }
+            }else{
+                // Handle O1 cuz o1 suck
+                const copyButtons = response.querySelectorAll('button');
+
+                for (const button of copyButtons) {
+                    if (button.innerHTML.includes('copy') || button.getAttribute('text')) {
+                        let txt = button.getAttribute('text');
+                        if (txt){
+                            let sepStr = extractBetweenSeparators(txt);
+                            if (sepStr.length > 0) {
+                                sepStr.forEach((str, index) => {
+                                    matches.push({
+                                        content: str,
+                                        isTyped: false
+                                    });
+                                })
+                            }else {
+                                matches.push({
+                                    content: txt,
+                                    isTyped: false
+                                });
+                            }
+                        }
+
+
+                    }
+                }
             }
 
 
@@ -409,6 +456,8 @@ function extractCodeSnippets(avoidSmartScreen) {
         };
     }
 }
+
+
 
 async function extractPromptText() {
     try {
@@ -546,7 +595,7 @@ async function copyPromptToClipboard(traceNo, shorten) {
     const promptText = await extractPromptText();
     const traceText = await extractStackTrace(traceNo)
 
-    promptTextGen = prompt(promptText, traceText, shorten)
+    promptTextGen = promptV2(promptText, traceText)
 
     if (promptTextGen) {
         navigator.clipboard.writeText(promptTextGen)
@@ -568,6 +617,18 @@ async function copyPromptToClipboard(traceNo, shorten) {
     } else {
         alert("No prompt text found to copy");
     }
+}
+
+function promptV2(promptText, traceText){
+    let finalPromptText = "Your task is to look at the prompt and test result, and provide an overall justification " +
+        "to each unit test in the form of: {test name} - (PASS/FAIL) + (in doing something/because of something)\n"+
+        "For example, with 1157680/test.py::TestModularInverse::test_basic_cases PASSED, you can say Test basic cases - " +
+        "PASSED in handling basic cases for Modular Inverse. Same thing, if test, fails, say FAILED because something " +
+        "something. \nPUt each test justification in a line, and MUST wrap the whole answer in a copiable block.\n"
+
+    finalPromptText += "OK, and here is the prompt and the stack trace. REMEMBER TO WRAP IT IN A COPYABLE CODE BLOCK:\n" +
+        promptText + "\n" + traceText
+    return finalPromptText;
 }
 
 function prompt (promptText, traceText, shorten) {
