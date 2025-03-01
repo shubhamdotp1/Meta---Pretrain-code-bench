@@ -45,6 +45,10 @@ document.getElementById('copyShortenTracePromptC').addEventListener('click', asy
     await copyPromptToClipboard(3, true);
 })
 
+document.getElementById('copyPromptWithSample').addEventListener('click', async (e) => {
+    await copyPromptSampleToClipboard();
+})
+
 
 document.getElementById('extractBtn').addEventListener('click', async function () {
     const status = document.getElementById('status');
@@ -527,6 +531,67 @@ async function extractPromptText() {
 }
 
 
+async function extractAnswer(traceNo) {
+    try {
+        const tabs = await new Promise((resolve, reject) => {
+            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                if (chrome.runtime.lastError)
+                    reject(chrome.runtime.lastError);
+                else
+                    resolve(tabs);
+            });
+        });
+
+        if (!tabs || !tabs[0]) {
+            throw new Error("No active tab found");
+        }
+
+        const results = await new Promise((resolve, reject) => {
+            chrome.scripting.executeScript({
+                target: {tabId: tabs[0].id},
+                function: function(traceNo) {
+                    try {
+                        const promptElements = document.querySelectorAll('[id^="promptResponse-"]');
+                        const elementsArray = Array.from(promptElements);
+
+                        if (elementsArray.length === 0) {
+                            return "No elements found with ID matching responseEvaluation-{number}";
+                        }
+
+                        if (elementsArray.length >= traceNo) {
+                            let element = elementsArray[traceNo-1];
+                            const copyButtons = element.querySelectorAll('button');
+
+                            for (const button of copyButtons) {
+                                if (button.innerHTML.includes('copy') || button.getAttribute('text')) {
+                                    return button.getAttribute('text') || "Found button but no text attribute";
+                                }
+                            }
+
+                            return element.textContent || "Found element but couldn't extract text";
+                        } else {
+                            return `Not enough elements found. Requested: ${traceNo}, Available: ${elementsArray.length}`;
+                        }
+                    } catch (error) {
+                        return "Error in extractStackTrace: " + error.message;
+                    }
+                },
+                args: [traceNo]
+            }, (results) => {
+                if (chrome.runtime.lastError)
+                    reject(chrome.runtime.lastError);
+                else
+                    resolve(results);
+            });
+        });
+
+        return results[0].result;
+    } catch (error) {
+        console.error("Error in extractAnswer:", error);
+        throw error;
+    }
+}
+
 async function extractStackTrace(traceNo) {
     try {
         const tabs = await new Promise((resolve, reject) => {
@@ -593,41 +658,72 @@ async function extractStackTrace(traceNo) {
 
 async function copyPromptToClipboard(traceNo, shorten) {
     const promptText = await extractPromptText();
+    const answer = await extractAnswer(traceNo)
     const traceText = await extractStackTrace(traceNo)
 
-    promptTextGen = promptV2(promptText, traceText)
+    let promptTextGen = promptV2(promptText, answer, traceText)
 
     if (promptTextGen) {
-        navigator.clipboard.writeText(promptTextGen)
-            .then(() => {
-                console.log("Prompt text copied to clipboard");
-                // alert("Prompt text copied to clipboard in way 1!");
-            })
-            .catch(err => {
-                console.error("Failed to copy text: ", err);
-                // Fallback method for clipboard copy
-                const textarea = document.createElement('textarea');
-                textarea.value = promptTextGen;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                //alert("Prompt text copied to clipboard in way 2!");
-            });
+        await toClipboard(promptTextGen)
     } else {
         alert("No prompt text found to copy");
     }
 }
 
-function promptV2(promptText, traceText){
+async function toClipboard(promptTextGen) {
+    navigator.clipboard.writeText(promptTextGen)
+        .then(() => {
+            console.log("Prompt text copied to clipboard");
+            // alert("Prompt text copied to clipboard in way 1!");
+        })
+        .catch(err => {
+            console.error("Failed to copy text: ", err);
+            // Fallback method for clipboard copy
+            const textarea = document.createElement('textarea');
+            textarea.value = promptTextGen;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            //alert("Prompt text copied to clipboard in way 2!");
+        });
+}
+
+async function copyPromptSampleToClipboard() {
+    let promptText = ""
+    try {
+        promptText = await extractPromptText();
+    }catch (e) {
+        console.log(e)
+    }
+    let finalPromptText = "Your task is, from a given original text or llm prompt to do something in " +
+        "a certain programming language, you need to create a doc " +
+        "string that reflect the meaning of the given text and could help a llm model to generate the " +
+        "complete class or function to be tested later. I do have some example for you. They are all in Python though, so for " +
+        "other languages, do your best to stay reasonably similar in tone. Here are the examples: \n";
+
+    finalPromptText += samplePrompt();
+    finalPromptText += "\n\nAnd below is the original text that I want you to mimic to the above examples. Remember to " +
+        "make the solution easily copyable. Also, since the function has to be testable, you are welcome to leave out any " +
+        "ambiguous, redundant, meaningless or untestable detail in the final result. Must not use markdown-centric chars like" +
+        "backtick, asterisk, hash mark or single quote, unless it is logically required and necessary for the result."
+    finalPromptText += promptText;
+
+    await toClipboard(finalPromptText)
+}
+
+function promptV2(promptText, answer, traceText){
     let finalPromptText = "Your task is to look at the prompt and test result, and provide an overall justification " +
         "to each unit test in the form of: {test name} - (PASS/FAIL) + (in doing something/because of something)\n"+
         "For example, with 1157680/test.py::TestModularInverse::test_basic_cases PASSED, you can say Test basic cases - " +
         "PASSED in handling basic cases for Modular Inverse. Same thing, if test, fails, say FAILED because something " +
-        "something. \nPUt each test justification in a line, and MUST wrap the whole answer in a copiable block.\n"
+        "something. Accuracy justification should provide insight on how the model response could pass or fail with " +
+        "logical code explanation, especially the case when it fails!\n You can get this info by looking at " +
+        "both the answer and the trace." +
+        "\nPut each test justification in a line, and MUST wrap the whole answer in a copiable block.\n"
 
-    finalPromptText += "OK, and here is the prompt and the stack trace. REMEMBER TO WRAP IT IN A COPYABLE CODE BLOCK:\n" +
-        promptText + "\n" + traceText
+    finalPromptText += "OK, and here is the prompt, the answer and the stack trace. REMEMBER TO WRAP IT IN A COPYABLE CODE BLOCK:\n" +
+        promptText + "\n\n--------------------------" + answer + "\n\n--------------------------" + traceText
     return finalPromptText;
 }
 
@@ -645,6 +741,110 @@ function prompt (promptText, traceText, shorten) {
 
     return finalPromptText;
 
+}
+
+function samplePrompt() {
+    return "\"def sum_list(lst1,lst2):\n" +
+    "\"\"\"\n" +
+    "Takes as input two lists [a_1,...,a_n], [b_1,...,b_n] and returns [a_1+b_1,...,a_n+b_n].\n" +
+    "\"\"\"\"\n" +
+    "---------------------------------------------------------------------------------------------"+
+    "\"from itertools import groupby\n" +
+    "\n" +
+    "def pack_consecutive_duplicates(list1):\n" +
+    "\"\"\"\n" +
+    "Pack consecutive duplicates of a given list elements into sublists.\n" +
+    "\"\"\"\"\n" +
+    "---------------------------------------------------------------------------------------------"+
+    "\"def is_nonagonal(n):\n" +
+    "\"\"\"\n" +
+    "Finds the nth nonagonal number.\n" +
+    "\"\"\"\"\n" +
+    "---------------------------------------------------------------------------------------------"+
+    "\"import numpy as np\n" +
+    "\n" +
+    "\n" +
+    "def rotate_puzzle_piece(puzzle: list) -> np.ndarray:\n" +
+    "\"\"\"\n" +
+    "You are developing a game that involves puzzle mechanics where players need to rotate pieces to fit into a specific pattern.\n" +
+    "The puzzle pieces are represented as numpy arrays of dimension [2 x num_pieces]. Each column corresponds to the [x, y] coordinates.\n" +
+    "In order to solve a particular level, a player needs to rotate a given puzzle piece 90 degrees counterclockwise.\n" +
+    "\n" +
+    "\n" +
+    "Takes a 2D matrix representing the puzzle piece as an input and returns a new 2D matrix representing the puzzle\n" +
+    "piece after it has been rotated 90 degrees counterclockwise.\n" +
+    "\"\"\"\"\n" +
+    "---------------------------------------------------------------------------------------------"+
+    "\"import pandas as pd\n" +
+    "\n" +
+    "def pd_row_sum_with_next(df: pd.DataFrame) -> pd.DataFrame:\n" +
+    "\"\"\"\n" +
+    "Takes a pandas DataFrame `df` and returns a new DataFrame with the same columns as `df` and one additional column `sum` such that df.iloc[i].sum contains df.value.iloc[i] + df.value.iloc[i+1] if i > len(df) and df.iloc[i].diff contains df.value.iloc[i] otherwise.\n" +
+    "\"\"\"\"\n" +
+    "---------------------------------------------------------------------------------------------"+
+    "\"def maxAverageOfPath(cost):\n" +
+    "\"\"\"\n" +
+    "Given a square matrix of size N*N given as a list of lists, where each cell is associated with a specific cost. A path is defined as a specific sequence of cells that starts from the top-left cell move only right or down and ends on bottom right cell. We want to find a path with the maximum average over all existing paths. Average is computed as total cost divided by the number of cells visited in the path.\n" +
+    "\"\"\"\"\n" +
+    "---------------------------------------------------------------------------------------------"+
+    "\"from typing import List, Tuple\n" +
+    "import numpy as np\n" +
+    "\n" +
+    "def burnside_lemma_orbit_count(group_elements: List[np.ndarray], object_set: List[np.ndarray]) -> int:\n" +
+    "\"\"\"\"\"\"\n" +
+    "Computes the number of distinct objects under the action of a given group using Burnside's Lemma.\n" +
+    "\n" +
+    "Burnside's Lemma states that the number of distinct objects (orbits) under a group action is given by:\n" +
+    "\n" +
+    "|X/G| = (1 / |G|) * sum(|X^g| for g in G)\n" +
+    "\n" +
+    "where:\n" +
+    "- |X/G| is the number of distinct objects.\n" +
+    "- |G| is the number of group elements.\n" +
+    "- X^g is the set of elements in X that remain unchanged under transformation g.\n" +
+    "\n" +
+    "Example:\n" +
+    ">>> import numpy as np\n" +
+    ">>> g1 = np.array([[0, 1], [1, 0]])\n" +
+    ">>> g2 = np.array([[1, 0], [0, 1]])\n" +
+    ">>> obj1 = np.array([[1, 2], [2, 1]])\n" +
+    ">>> obj2 = np.array([[2, 1], [1, 2]])\n" +
+    ">>> burnside_lemma_orbit_count([g1, g2], [obj1, obj2])\n" +
+    "1\n" +
+    "\"\"\"\"\"\"\"\n" +
+    "---------------------------------------------------------------------------------------------"+
+    "\"def dynamic_connectivity(n: int, events: list) -> list:\n" +
+    " \"\"\"\"\"\"\n" +
+    " Process a sequence of events (edge additions, removals, and connectivity queries) on an undirected graph with n nodes.\n" +
+    " Each event is a tuple: (\"\"add\"\", u, v), (\"\"remove\"\", u, v), or (\"\"query\"\", u, v) with nodes 1-indexed.\n" +
+    " \n" +
+    " The function should process events in the given order:\n" +
+    " - \"\"add\"\": Add an undirected edge between nodes u and v. If the same edge is added multiple times, subsequent additions are ignored.\n" +
+    " - \"\"remove\"\": Remove the edge between nodes u and v if it exists; if the edge does not exist, do nothing.\n" +
+    " - \"\"query\"\": Determine whether nodes u and v are connected, i.e., if there exists a path (via edges currently present in the graph) between them.\n" +
+    " \n" +
+    " Special Cases:\n" +
+    " - If the events list is empty, return -1.\n" +
+    " - If any event contains a negative node value, raise a RuntimeError with the error message \"\"input cannot be a negative value\"\".\n" +
+    " \n" +
+    " Args:\n" +
+    " n: int - number of nodes in the graph\n" +
+    " events: list[tuple[str, int, int]] - list of events in order\n" +
+    " \n" +
+    " Return:\n" +
+    " list[bool] - connectivity answers for each query in the order of occurrence, or -1 when events is empty\n" +
+    " \n" +
+    " Raises:\n" +
+    " RuntimeError: if any node in an event is a negative value, with message \"\"input cannot be a negative value\"\"\n" +
+    " \n" +
+    " Examples:\n" +
+    " >>> dynamic_connectivity(4, [(\"\"add\"\", 1, 2), (\"\"query\"\", 1, 2)])\n" +
+    " [True]\n" +
+    " >>> dynamic_connectivity(3, [(\"\"add\"\", 1, 2), (\"\"remove\"\", 1, 2), (\"\"query\"\", 1, 2)])\n" +
+    " [False]\n" +
+    " >>> dynamic_connectivity(4, [])\n" +
+    " -1\n" +
+    " \"\"\"\"\"\"\""
 }
 
 function sample() {
