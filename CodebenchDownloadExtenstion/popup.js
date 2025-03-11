@@ -720,7 +720,9 @@ function promptV2(promptText, answer, traceText){
         "something. Accuracy justification should provide insight on how the model response could pass or fail with " +
         "logical code explanation, especially the case when it fails!\n You can get this info by looking at " +
         "both the answer and the trace." +
-        "\nPut each test justification in a line, and MUST wrap the whole answer in a copiable block.\n"
+        "\nPut each test justification in a line, and MUST wrap the whole answer in a copiable block." +
+        "\nQuote some code if you think it necessary.\n" +
+        "MOST IMPORTANTLY: SOUND LIKE A HUMAN PLEASE. DO NOT SOUND RIGID WITH A MACHINE GENERATED TEXT\n"
 
     finalPromptText += "OK, and here is the prompt, the answer and the stack trace. REMEMBER TO WRAP IT IN A COPYABLE CODE BLOCK:\n" +
         promptText + "\n\n--------------------------" + answer + "\n\n--------------------------" + traceText
