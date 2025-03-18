@@ -1,4 +1,3 @@
-
 // At the beginning of the file, add this with the other event listeners
 document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.get(['savePath', 'avoidSmartScreen'], (result) => {
@@ -9,8 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('avoidSmartScreen').checked = result.avoidSmartScreen;
         }
     });
-	
-	// Add event listeners
+
+    // Add event listeners
     const checkbox = document.getElementById('avoidSmartScreen');
     checkbox.addEventListener('change', (e) => {
         chrome.storage.local.set({avoidSmartScreen: e.target.checked}); // Note: changed from e.target.value to e.target.checked
@@ -49,11 +48,19 @@ document.getElementById('copyPromptWithSample').addEventListener('click', async 
     await copyPromptSampleToClipboard();
 })
 
+document.getElementById('copyIncorrectAnswer').addEventListener('click', async (e) => {
+    await  copyAnswerPromptToClipboard(false);
+})
+
+document.getElementById('copyCorrectAnswer').addEventListener('click', async (e) => {
+    await  copyAnswerPromptToClipboard(true);
+})
+
 
 document.getElementById('extractBtn').addEventListener('click', async function () {
     const status = document.getElementById('status');
     const savePath = document.getElementById('savePath').value;
-	const avoidSmartScreen = document.getElementById('avoidSmartScreen').checked; 
+    const avoidSmartScreen = document.getElementById('avoidSmartScreen').checked;
 
     if (!savePath) {
         status.innerHTML = 'Error: Please enter a save location';
@@ -67,7 +74,7 @@ document.getElementById('extractBtn').addEventListener('click', async function (
         const results = await chrome.scripting.executeScript({
             target: {tabId: tab.id},
             function: extractCodeSnippets,
-			args: [avoidSmartScreen]  // Pass the checkbox state as an argument
+            args: [avoidSmartScreen]  // Pass the checkbox state as an argument
         });
 
         const result = results[0].result;
@@ -84,7 +91,7 @@ document.getElementById('extractBtn').addEventListener('click', async function (
         status.innerHTML += `<br>Found ${result.responsesFound} responses`;
         status.innerHTML += `<br>Found ${result.codeBlocksFound} code blocks`;
         status.innerHTML += `<br>Extension: ${result.ext}`;
-		status.innerHTML += `<br>Task ID: ${result.taskId}`;
+        status.innerHTML += `<br>Task ID: ${result.taskId}`;
 
         if (result.codeBlocksFound > 0) {
             const save_path_with_language = `${savePath}/${result.language}`;
@@ -124,16 +131,16 @@ document.getElementById('extractBtn').addEventListener('click', async function (
             // Save code snippets
             for (const snippet of result.snippets) {
                 const mimeTypes = {
-					'.js': 'application/javascript',
-					'.py': 'text/x-python',
-					'.cpp': 'text/x-c',
-					'.java': 'text/x-java',
-					// // Add the alternative extensions
-					// '.jsx': 'application/javascript',
-					// '.pyx': 'text/x-python',
-					// '.cppx': 'text/x-c',
-					// '.javax': 'text/x-java'
-				};
+                    '.js': 'application/javascript',
+                    '.py': 'text/x-python',
+                    '.cpp': 'text/x-c',
+                    '.java': 'text/x-java',
+                    // // Add the alternative extensions
+                    // '.jsx': 'application/javascript',
+                    // '.pyx': 'text/x-python',
+                    // '.cppx': 'text/x-c',
+                    // '.javax': 'text/x-java'
+                };
 
                 const extension = snippet.fileName.split('.').pop();
                 const mimeType = mimeTypes['.' + extension] || 'text/plain';
@@ -335,8 +342,8 @@ function extractCodeSnippets(avoidSmartScreen) {
         let fileCounter = 0;
 
 
-		const fileExtension = avoidSmartScreen ? language.altExtension : language.extension;
-	
+        const fileExtension = avoidSmartScreen ? language.altExtension : language.extension;
+
 
         responses.forEach((response, responseIndex) => {
             let matches = [];
@@ -368,14 +375,14 @@ function extractCodeSnippets(avoidSmartScreen) {
                         isTyped: false
                     }));
                 }
-            }else{
+            } else {
                 // Handle O1 cuz o1 suck
                 const copyButtons = response.querySelectorAll('button');
 
                 for (const button of copyButtons) {
                     if (button.innerHTML.includes('copy') || button.getAttribute('text')) {
                         let txt = button.getAttribute('text');
-                        if (txt){
+                        if (txt) {
                             let sepStr = extractBetweenSeparators(txt);
                             if (sepStr.length > 0) {
                                 sepStr.forEach((str, index) => {
@@ -384,7 +391,7 @@ function extractCodeSnippets(avoidSmartScreen) {
                                         isTyped: false
                                     });
                                 })
-                            }else {
+                            } else {
                                 matches.push({
                                     content: txt,
                                     isTyped: false
@@ -431,21 +438,21 @@ function extractCodeSnippets(avoidSmartScreen) {
         if (snippets.length > 3) {
             snippets = snippets.slice(0, 3);
         }
-		
-		if (!avoidSmartScreen){
-			// Add default content only if we have exactly 3 snippets
-			if (snippets.length === 3) {
-				snippets.push({
-					content: language.defaultContent,
-					fileName: `model_0${fileExtension}`
-				});
-			}
-		}
+
+        if (!avoidSmartScreen) {
+            // Add default content only if we have exactly 3 snippets
+            if (snippets.length === 3) {
+                snippets.push({
+                    content: language.defaultContent,
+                    fileName: `model_0${fileExtension}`
+                });
+            }
+        }
 
         return {
             taskId: taskId,
             language: programmingLanguage,
-			ext: fileExtension,
+            ext: fileExtension,
             responsesFound: responses.length,
             codeBlocksFound: totalCodeBlocks,
             snippets: snippets
@@ -460,7 +467,6 @@ function extractCodeSnippets(avoidSmartScreen) {
         };
     }
 }
-
 
 
 async function extractPromptText() {
@@ -481,7 +487,7 @@ async function extractPromptText() {
         const results = await new Promise((resolve, reject) => {
             chrome.scripting.executeScript({
                 target: {tabId: tabs[0].id},
-                function: function() {
+                function: function () {
                     try {
                         // Find all elements with IDs starting with "promptTurn-"
                         const promptElements = Array.from(document.querySelectorAll('[id^="promptTurn-"]'));
@@ -530,6 +536,86 @@ async function extractPromptText() {
     }
 }
 
+async function extractIncorrectAnswer(textToSearch) {
+    try {
+        const tabs = await new Promise((resolve, reject) => {
+            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                if (chrome.runtime.lastError)
+                    reject(chrome.runtime.lastError);
+                else
+                    resolve(tabs);
+            });
+        });
+
+        if (!tabs || !tabs[0]) {
+            throw new Error("No active tab found");
+        }
+
+        const results = await new Promise((resolve, reject) => {
+            chrome.scripting.executeScript({
+                target: {tabId: tabs[0].id},
+                args: [textToSearch], // Pass the argument here
+                function: function(textToSearch) { // Receive it as a parameter here
+                    try {
+                        // Find the element with text matching textToSearch and red asterisk
+                        const incorrectSolutionElement = Array.from(document.querySelectorAll('span'))
+                            .find(element =>
+                                element.textContent.includes(textToSearch) &&
+                                element.innerHTML.includes('<span style="color: red;">')
+                            );
+
+                        if (!incorrectSolutionElement) {
+                            return ['Error: Could not find element with text: ' + textToSearch];
+                        }
+
+                        // Find the correct parent container - looking for ant-space-vertical
+                        const parentContainer = incorrectSolutionElement.closest('.ant-space-vertical');
+
+                        if (!parentContainer) {
+                            return ['Error: Could not find ant-space-vertical container'];
+                        }
+
+                        // Look for the button with copy icon and text attribute
+                        const copyButtons = Array.from(parentContainer.querySelectorAll('button'))
+                            .filter(button => {
+                                return button.querySelector('.anticon-copy') !== null && button.hasAttribute('text');
+                            });
+
+                        if (copyButtons.length === 0) {
+                            // If no copy buttons found with text attribute, try to get code directly
+                            const codeElements = parentContainer.querySelectorAll('pre code');
+                            if (codeElements.length > 0) {
+                                return Array.from(codeElements).map(el => el.textContent);
+                            }
+                            return ['Error: Could not find copy buttons or code elements'];
+                        }
+
+                        // Extract the code from the text attribute
+                        return copyButtons.map(button => button.getAttribute('text'));
+                    } catch (error) {
+                        return ['Error in extraction: ' + error.message];
+                    }
+                }
+            }, (results) => {
+                if (chrome.runtime.lastError) {
+                    reject(chrome.runtime.lastError);
+                } else {
+                    if (results && results[0] && results[0].result) {
+                        resolve(results[0].result);
+                    } else {
+                        resolve(['No results found']);
+                    }
+                }
+            });
+        });
+
+        return results;
+
+    } catch (error) {
+        console.error("Error in extractIncorrectAnswer:", error);
+        return ['Error: ' + error.message];
+    }
+}
 
 async function extractAnswer(traceNo) {
     try {
@@ -549,7 +635,7 @@ async function extractAnswer(traceNo) {
         const results = await new Promise((resolve, reject) => {
             chrome.scripting.executeScript({
                 target: {tabId: tabs[0].id},
-                function: function(traceNo) {
+                function: function (traceNo) {
                     try {
                         const promptElements = document.querySelectorAll('[id^="promptResponse-"]');
                         const elementsArray = Array.from(promptElements);
@@ -559,7 +645,7 @@ async function extractAnswer(traceNo) {
                         }
 
                         if (elementsArray.length >= traceNo) {
-                            let element = elementsArray[traceNo-1];
+                            let element = elementsArray[traceNo - 1];
                             const copyButtons = element.querySelectorAll('button');
 
                             for (const button of copyButtons) {
@@ -610,7 +696,7 @@ async function extractStackTrace(traceNo) {
         const results = await new Promise((resolve, reject) => {
             chrome.scripting.executeScript({
                 target: {tabId: tabs[0].id},
-                function: function(traceNo) {
+                function: function (traceNo) {
                     try {
                         const promptElements = document.querySelectorAll('[id^="responseEvaluation-"]');
                         const elementsArray = Array.from(promptElements);
@@ -620,7 +706,7 @@ async function extractStackTrace(traceNo) {
                         }
 
                         if (elementsArray.length >= traceNo) {
-                            let element = elementsArray[traceNo-1];
+                            let element = elementsArray[traceNo - 1];
                             const containingDiv = element.closest('div');
                             const copyButtons = containingDiv.querySelectorAll('button');
 
@@ -629,7 +715,6 @@ async function extractStackTrace(traceNo) {
                                     return button.getAttribute('text') || "Found button but no text attribute";
                                 }
                             }
-
 
 
                             return element.textContent || "Found element but couldn't extract text";
@@ -655,6 +740,29 @@ async function extractStackTrace(traceNo) {
         throw error;
     }
 }
+
+async function copyAnswerPromptToClipboard(correct) {
+    const promptText = await extractPromptText();
+
+    let promptTextGen;
+
+    if (!correct) {
+        let incorrectBlock = await extractIncorrectAnswer("Incorrect Solution");
+        let incorrectTrace = await extractIncorrectAnswer("Incorrect Solution Stack Trace");
+        promptTextGen = promptV2(promptText, incorrectBlock[0], incorrectTrace[0])
+    }else{
+        let idealSolutionBlock = await extractIncorrectAnswer("Ideal Solution");
+        let idealSolutionTrace = await extractIncorrectAnswer("Ideal Response Test Stack Trace");
+        promptTextGen = promptV2(promptText, idealSolutionBlock[0], idealSolutionTrace[0])
+    }
+
+    if (promptTextGen) {
+        await toClipboard(promptTextGen)
+    } else {
+        alert("No prompt text found to copy");
+    }
+}
+
 
 async function copyPromptToClipboard(traceNo, shorten) {
     const promptText = await extractPromptText();
@@ -693,7 +801,7 @@ async function copyPromptSampleToClipboard() {
     let promptText = ""
     try {
         promptText = await extractPromptText();
-    }catch (e) {
+    } catch (e) {
         console.log(e)
     }
     let finalPromptText = "Your task is, from a given original text or llm prompt to do something in " +
@@ -712,9 +820,9 @@ async function copyPromptSampleToClipboard() {
     await toClipboard(finalPromptText)
 }
 
-function promptV2(promptText, answer, traceText){
+function promptV2(promptText, answer, traceText) {
     let finalPromptText = "Your task is to look at the prompt and test result, and provide an overall justification " +
-        "to each unit test in the form of: {test name} - (PASS/FAIL) + (in doing something/because of something)\n"+
+        "to each unit test in the form of: {test name} - (PASS/FAIL) + (in doing something/because of something)\n" +
         "For example, with 1157680/test.py::TestModularInverse::test_basic_cases PASSED, you can say Test basic cases - " +
         "PASSED in handling basic cases for Modular Inverse. Same thing, if test, fails, say FAILED because something " +
         "something. Accuracy justification should provide insight on how the model response could pass or fail with " +
@@ -722,19 +830,20 @@ function promptV2(promptText, answer, traceText){
         "both the answer and the trace." +
         "\nPut each test justification in a line, and MUST wrap the whole answer in a copiable block." +
         "\nQuote some code if you think it necessary.\n" +
-        "MOST IMPORTANTLY: SOUND LIKE A HUMAN PLEASE. DO NOT SOUND RIGID WITH A MACHINE GENERATED TEXT\n"
+        "MOST IMPORTANTLY: YOUR WORDS MUST SOUND LIKE A NICE, NATURAL AND PROFESSIONAL HUMAN, DOING REVIEWS ON YOUR OWN STUFF AND DEFINITIVE. DO NOT SOUND RIGID WITH A MACHINE GENERATED TEXT AND DO NOT USE" +
+        "AMBIGUOUS KEYWORD LIKE PROBABLY, LIKELY...\n"
 
     finalPromptText += "OK, and here is the prompt, the answer and the stack trace. REMEMBER TO WRAP IT IN A COPYABLE CODE BLOCK:\n" +
         promptText + "\n\n--------------------------" + answer + "\n\n--------------------------" + traceText
     return finalPromptText;
 }
 
-function prompt (promptText, traceText, shorten) {
+function prompt(promptText, traceText, shorten) {
     let finalPromptText = "Your task is to return  up to 3 sentences, providing overall how good a langauge model provided a code, by looking" +
         "through the original prompt and the unit test stack trace. You can look at the prompt condition, the stack trace," +
         "and provide your own conclusion. Wrap it in a COPYABLE makrdown block.\n";
 
-    if (!shorten){
+    if (!shorten) {
         finalPromptText += sample();
     }
 
@@ -747,285 +856,285 @@ function prompt (promptText, traceText, shorten) {
 
 function samplePrompt() {
     return "\"def sum_list(lst1,lst2):\n" +
-    "\"\"\"\n" +
-    "Takes as input two lists [a_1,...,a_n], [b_1,...,b_n] and returns [a_1+b_1,...,a_n+b_n].\n" +
-    "\"\"\"\"\n" +
-    "---------------------------------------------------------------------------------------------"+
-    "\"from itertools import groupby\n" +
-    "\n" +
-    "def pack_consecutive_duplicates(list1):\n" +
-    "\"\"\"\n" +
-    "Pack consecutive duplicates of a given list elements into sublists.\n" +
-    "\"\"\"\"\n" +
-    "---------------------------------------------------------------------------------------------"+
-    "\"def is_nonagonal(n):\n" +
-    "\"\"\"\n" +
-    "Finds the nth nonagonal number.\n" +
-    "\"\"\"\"\n" +
-    "---------------------------------------------------------------------------------------------"+
-    "\"import numpy as np\n" +
-    "\n" +
-    "\n" +
-    "def rotate_puzzle_piece(puzzle: list) -> np.ndarray:\n" +
-    "\"\"\"\n" +
-    "You are developing a game that involves puzzle mechanics where players need to rotate pieces to fit into a specific pattern.\n" +
-    "The puzzle pieces are represented as numpy arrays of dimension [2 x num_pieces]. Each column corresponds to the [x, y] coordinates.\n" +
-    "In order to solve a particular level, a player needs to rotate a given puzzle piece 90 degrees counterclockwise.\n" +
-    "\n" +
-    "\n" +
-    "Takes a 2D matrix representing the puzzle piece as an input and returns a new 2D matrix representing the puzzle\n" +
-    "piece after it has been rotated 90 degrees counterclockwise.\n" +
-    "\"\"\"\"\n" +
-    "---------------------------------------------------------------------------------------------"+
-    "\"import pandas as pd\n" +
-    "\n" +
-    "def pd_row_sum_with_next(df: pd.DataFrame) -> pd.DataFrame:\n" +
-    "\"\"\"\n" +
-    "Takes a pandas DataFrame `df` and returns a new DataFrame with the same columns as `df` and one additional column `sum` such that df.iloc[i].sum contains df.value.iloc[i] + df.value.iloc[i+1] if i > len(df) and df.iloc[i].diff contains df.value.iloc[i] otherwise.\n" +
-    "\"\"\"\"\n" +
-    "---------------------------------------------------------------------------------------------"+
-    "\"def maxAverageOfPath(cost):\n" +
-    "\"\"\"\n" +
-    "Given a square matrix of size N*N given as a list of lists, where each cell is associated with a specific cost. A path is defined as a specific sequence of cells that starts from the top-left cell move only right or down and ends on bottom right cell. We want to find a path with the maximum average over all existing paths. Average is computed as total cost divided by the number of cells visited in the path.\n" +
-    "\"\"\"\"\n" +
-    "---------------------------------------------------------------------------------------------"+
-    "\"from typing import List, Tuple\n" +
-    "import numpy as np\n" +
-    "\n" +
-    "def burnside_lemma_orbit_count(group_elements: List[np.ndarray], object_set: List[np.ndarray]) -> int:\n" +
-    "\"\"\"\"\"\"\n" +
-    "Computes the number of distinct objects under the action of a given group using Burnside's Lemma.\n" +
-    "\n" +
-    "Burnside's Lemma states that the number of distinct objects (orbits) under a group action is given by:\n" +
-    "\n" +
-    "|X/G| = (1 / |G|) * sum(|X^g| for g in G)\n" +
-    "\n" +
-    "where:\n" +
-    "- |X/G| is the number of distinct objects.\n" +
-    "- |G| is the number of group elements.\n" +
-    "- X^g is the set of elements in X that remain unchanged under transformation g.\n" +
-    "\n" +
-    "Example:\n" +
-    ">>> import numpy as np\n" +
-    ">>> g1 = np.array([[0, 1], [1, 0]])\n" +
-    ">>> g2 = np.array([[1, 0], [0, 1]])\n" +
-    ">>> obj1 = np.array([[1, 2], [2, 1]])\n" +
-    ">>> obj2 = np.array([[2, 1], [1, 2]])\n" +
-    ">>> burnside_lemma_orbit_count([g1, g2], [obj1, obj2])\n" +
-    "1\n" +
-    "\"\"\"\"\"\"\"\n" +
-    "---------------------------------------------------------------------------------------------"+
-    "\"def dynamic_connectivity(n: int, events: list) -> list:\n" +
-    " \"\"\"\"\"\"\n" +
-    " Process a sequence of events (edge additions, removals, and connectivity queries) on an undirected graph with n nodes.\n" +
-    " Each event is a tuple: (\"\"add\"\", u, v), (\"\"remove\"\", u, v), or (\"\"query\"\", u, v) with nodes 1-indexed.\n" +
-    " \n" +
-    " The function should process events in the given order:\n" +
-    " - \"\"add\"\": Add an undirected edge between nodes u and v. If the same edge is added multiple times, subsequent additions are ignored.\n" +
-    " - \"\"remove\"\": Remove the edge between nodes u and v if it exists; if the edge does not exist, do nothing.\n" +
-    " - \"\"query\"\": Determine whether nodes u and v are connected, i.e., if there exists a path (via edges currently present in the graph) between them.\n" +
-    " \n" +
-    " Special Cases:\n" +
-    " - If the events list is empty, return -1.\n" +
-    " - If any event contains a negative node value, raise a RuntimeError with the error message \"\"input cannot be a negative value\"\".\n" +
-    " \n" +
-    " Args:\n" +
-    " n: int - number of nodes in the graph\n" +
-    " events: list[tuple[str, int, int]] - list of events in order\n" +
-    " \n" +
-    " Return:\n" +
-    " list[bool] - connectivity answers for each query in the order of occurrence, or -1 when events is empty\n" +
-    " \n" +
-    " Raises:\n" +
-    " RuntimeError: if any node in an event is a negative value, with message \"\"input cannot be a negative value\"\"\n" +
-    " \n" +
-    " Examples:\n" +
-    " >>> dynamic_connectivity(4, [(\"\"add\"\", 1, 2), (\"\"query\"\", 1, 2)])\n" +
-    " [True]\n" +
-    " >>> dynamic_connectivity(3, [(\"\"add\"\", 1, 2), (\"\"remove\"\", 1, 2), (\"\"query\"\", 1, 2)])\n" +
-    " [False]\n" +
-    " >>> dynamic_connectivity(4, [])\n" +
-    " -1\n" +
-    " \"\"\"\"\"\"\""
+        "\"\"\"\n" +
+        "Takes as input two lists [a_1,...,a_n], [b_1,...,b_n] and returns [a_1+b_1,...,a_n+b_n].\n" +
+        "\"\"\"\"\n" +
+        "---------------------------------------------------------------------------------------------" +
+        "\"from itertools import groupby\n" +
+        "\n" +
+        "def pack_consecutive_duplicates(list1):\n" +
+        "\"\"\"\n" +
+        "Pack consecutive duplicates of a given list elements into sublists.\n" +
+        "\"\"\"\"\n" +
+        "---------------------------------------------------------------------------------------------" +
+        "\"def is_nonagonal(n):\n" +
+        "\"\"\"\n" +
+        "Finds the nth nonagonal number.\n" +
+        "\"\"\"\"\n" +
+        "---------------------------------------------------------------------------------------------" +
+        "\"import numpy as np\n" +
+        "\n" +
+        "\n" +
+        "def rotate_puzzle_piece(puzzle: list) -> np.ndarray:\n" +
+        "\"\"\"\n" +
+        "You are developing a game that involves puzzle mechanics where players need to rotate pieces to fit into a specific pattern.\n" +
+        "The puzzle pieces are represented as numpy arrays of dimension [2 x num_pieces]. Each column corresponds to the [x, y] coordinates.\n" +
+        "In order to solve a particular level, a player needs to rotate a given puzzle piece 90 degrees counterclockwise.\n" +
+        "\n" +
+        "\n" +
+        "Takes a 2D matrix representing the puzzle piece as an input and returns a new 2D matrix representing the puzzle\n" +
+        "piece after it has been rotated 90 degrees counterclockwise.\n" +
+        "\"\"\"\"\n" +
+        "---------------------------------------------------------------------------------------------" +
+        "\"import pandas as pd\n" +
+        "\n" +
+        "def pd_row_sum_with_next(df: pd.DataFrame) -> pd.DataFrame:\n" +
+        "\"\"\"\n" +
+        "Takes a pandas DataFrame `df` and returns a new DataFrame with the same columns as `df` and one additional column `sum` such that df.iloc[i].sum contains df.value.iloc[i] + df.value.iloc[i+1] if i > len(df) and df.iloc[i].diff contains df.value.iloc[i] otherwise.\n" +
+        "\"\"\"\"\n" +
+        "---------------------------------------------------------------------------------------------" +
+        "\"def maxAverageOfPath(cost):\n" +
+        "\"\"\"\n" +
+        "Given a square matrix of size N*N given as a list of lists, where each cell is associated with a specific cost. A path is defined as a specific sequence of cells that starts from the top-left cell move only right or down and ends on bottom right cell. We want to find a path with the maximum average over all existing paths. Average is computed as total cost divided by the number of cells visited in the path.\n" +
+        "\"\"\"\"\n" +
+        "---------------------------------------------------------------------------------------------" +
+        "\"from typing import List, Tuple\n" +
+        "import numpy as np\n" +
+        "\n" +
+        "def burnside_lemma_orbit_count(group_elements: List[np.ndarray], object_set: List[np.ndarray]) -> int:\n" +
+        "\"\"\"\"\"\"\n" +
+        "Computes the number of distinct objects under the action of a given group using Burnside's Lemma.\n" +
+        "\n" +
+        "Burnside's Lemma states that the number of distinct objects (orbits) under a group action is given by:\n" +
+        "\n" +
+        "|X/G| = (1 / |G|) * sum(|X^g| for g in G)\n" +
+        "\n" +
+        "where:\n" +
+        "- |X/G| is the number of distinct objects.\n" +
+        "- |G| is the number of group elements.\n" +
+        "- X^g is the set of elements in X that remain unchanged under transformation g.\n" +
+        "\n" +
+        "Example:\n" +
+        ">>> import numpy as np\n" +
+        ">>> g1 = np.array([[0, 1], [1, 0]])\n" +
+        ">>> g2 = np.array([[1, 0], [0, 1]])\n" +
+        ">>> obj1 = np.array([[1, 2], [2, 1]])\n" +
+        ">>> obj2 = np.array([[2, 1], [1, 2]])\n" +
+        ">>> burnside_lemma_orbit_count([g1, g2], [obj1, obj2])\n" +
+        "1\n" +
+        "\"\"\"\"\"\"\"\n" +
+        "---------------------------------------------------------------------------------------------" +
+        "\"def dynamic_connectivity(n: int, events: list) -> list:\n" +
+        " \"\"\"\"\"\"\n" +
+        " Process a sequence of events (edge additions, removals, and connectivity queries) on an undirected graph with n nodes.\n" +
+        " Each event is a tuple: (\"\"add\"\", u, v), (\"\"remove\"\", u, v), or (\"\"query\"\", u, v) with nodes 1-indexed.\n" +
+        " \n" +
+        " The function should process events in the given order:\n" +
+        " - \"\"add\"\": Add an undirected edge between nodes u and v. If the same edge is added multiple times, subsequent additions are ignored.\n" +
+        " - \"\"remove\"\": Remove the edge between nodes u and v if it exists; if the edge does not exist, do nothing.\n" +
+        " - \"\"query\"\": Determine whether nodes u and v are connected, i.e., if there exists a path (via edges currently present in the graph) between them.\n" +
+        " \n" +
+        " Special Cases:\n" +
+        " - If the events list is empty, return -1.\n" +
+        " - If any event contains a negative node value, raise a RuntimeError with the error message \"\"input cannot be a negative value\"\".\n" +
+        " \n" +
+        " Args:\n" +
+        " n: int - number of nodes in the graph\n" +
+        " events: list[tuple[str, int, int]] - list of events in order\n" +
+        " \n" +
+        " Return:\n" +
+        " list[bool] - connectivity answers for each query in the order of occurrence, or -1 when events is empty\n" +
+        " \n" +
+        " Raises:\n" +
+        " RuntimeError: if any node in an event is a negative value, with message \"\"input cannot be a negative value\"\"\n" +
+        " \n" +
+        " Examples:\n" +
+        " >>> dynamic_connectivity(4, [(\"\"add\"\", 1, 2), (\"\"query\"\", 1, 2)])\n" +
+        " [True]\n" +
+        " >>> dynamic_connectivity(3, [(\"\"add\"\", 1, 2), (\"\"remove\"\", 1, 2), (\"\"query\"\", 1, 2)])\n" +
+        " [False]\n" +
+        " >>> dynamic_connectivity(4, [])\n" +
+        " -1\n" +
+        " \"\"\"\"\"\"\""
 }
 
 function sample() {
     return "I can give you some example like:\n" +
-    "EXAMPLE 1:\n" +
-    "Prompt and stack trace: \n" +
-    "-------------------------------------------------------------------\n" +
-    "/**\n" +
-    " * Compresses IoT sensor data using Burrows-Wheeler Transform algorithm\n" +
-    " * \n" +
-    " * @typedef {Object} SensorReading\n" +
-    " * @property {string} type - Type of sensor (e.g., \"temperature\", \"humidity\", \"pressure\")\n" +
-    " * @property {number} value - The numerical reading from the sensor\n" +
-    " * @property {string} unit - Unit of measurement (e.g., \"C\", \"%\", \"hPa\")\n" +
-    " * \n" +
-    " * @typedef {Object} SensorData\n" +
-    " * @property {string} deviceId - Unique identifier for the sensor device\n" +
-    " * @property {number} timestamp - Unix timestamp of when readings were collected\n" +
-    " * @property {SensorReading[]} readings - Array of sensor readings\n" +
-    " * \n" +
-    " * @typedef {Object} CompressedResult\n" +
-    " * @property {string} deviceId - Original device identifier\n" +
-    " * @property {number} timestamp - Original timestamp\n" +
-    " * @property {string} compressedData - BWT and RLE compressed data string\n" +
-    " * @property {number} bwtIndex - Index needed for BWT decompression\n" +
-    " * @property {number} originalSize - Size in bytes of the original data\n" +
-    " * @property {number} compressedSize - Size in bytes of the compressed data\n" +
-    " * @property {string} compressionRatio - Ratio of compressed to original size as percentage\n" +
-    " * @property {string[]} sensorTypes - Types of sensors in the original data\n" +
-    " * @property {number} readingCount - Number of readings in the original data\n" +
-    " * \n" +
-    " * Implements a Burrows-Wheeler Transform with Run-Length Encoding for efficient\n" +
-    " * compression of sensor data. Optimizes for time-series data patterns common in IoT sensors.\n" +
-    " * Complete the function to handle real-time sensor data compression efficiently.\n" +
-    " * \n" +
-    " * @param {SensorData} sensorData - Object containing sensor device data and readings\n" +
-    " * @returns {CompressedResult} Compressed data and metadata\n" +
-    " * \n" +
-    " * @throws {Error} \"Invalid sensor data format\" - If input is missing required properties\n" +
-    " * @throws {TypeError} \"Invalid sensor reading value\" - If readings contain non-numeric values\n" +
-    " * @throws {Error} \"Empty readings array\" - If no sensor readings are provided\n" +
-    " * \n" +
-    " * Remember to wrap the final code in a code block\n" +
-    " */" +
-    "```bash\n" +
-    "✓ compresses valid sensor data and returns correct result structure\n" +
-    "✓ achieves better compression with repeating data patterns\n" +
-    "✓ throws error for invalid sensor data format\n" +
-    "✓ throws error for invalid sensor reading values\n" +
-    "✓ throws error for empty readings array\n" +
-    "✓ produces consistent results for identical inputs\n" +
-    "✓ calculates compression ratio correctly\n" +
-    "✓ handles large datasets without excessive runtime\n" +
-    "✓ correctly identifies all sensor types in the data\n" +
-    "✓ handles single reading correctly\n" +
-    "✓ handles extremely large sensor values\n" +
-    "```\n" +
-    "Good Answer: \n" +
-    "-------------------------------------------------------------------\n" +
-    "The provided code satisfied the prompt requirement of providing a working Burrows-Wheeler implementation, optimize to" +
-    "handle time-series data pattern, as well as handing multiple edge cases regarding in valid sensor data format or" +
-    "invalid sensor reading values.\n" +
-    "\n\n\n" +
-    "EXAMPLE 2:\n" +
-    "Prompt and stack trace: \n" +
-    "-------------------------------------------------------------------\n" +
-    "def calculate_modular_inverse(a: int, m: int) -> tuple[int, list[int]]:\n" +
-    "    \"\"\"\n" +
-    "    Task: Generate a Python implementation for modular multiplicative inverse using Extended Euclidean Algorithm\n" +
-    "    that returns both the inverse and the key intermediate values.\n" +
-    "\n" +
-    "    Requirements:\n" +
-    "    - Main entry point function should calculate modular inverse\n" +
-    "    - Must return a tuple containing:\n" +
-    "        * The modular inverse as first element\n" +
-    "        * List of intermediate remainders from the Extended Euclidean steps\n" +
-    "    - Support functions should handle Extended Euclidean Algorithm computation\n" +
-    "    - Must optimize for space and time complexity\n" +
-    "    - List of intermediate remainders must start with larger input number and remain in descending order\n" +
-    "    \n" +
-    "    Edge cases to handle:\n" +
-    "    - Non-coprime inputs \n" +
-    "    - Zero input\n" +
-    "    - Negative numbers (normalize and handle signs for both input and modulus, even negative moduli)\n" +
-    "    - Large numbers (implement overflow protection)\n" +
-    "    \n" +
-    "    Additional notes:\n" +
-    "    - Track key intermediate values for debugging\n" +
-    "    - Verify final result satisfies modular inverse property\n" +
-    "    - Return value must be smallest positive representation\n" +
-    "    - Wrap the result in a code block\n" +
-    "    \"\"\"" +
+        "EXAMPLE 1:\n" +
+        "Prompt and stack trace: \n" +
+        "-------------------------------------------------------------------\n" +
+        "/**\n" +
+        " * Compresses IoT sensor data using Burrows-Wheeler Transform algorithm\n" +
+        " * \n" +
+        " * @typedef {Object} SensorReading\n" +
+        " * @property {string} type - Type of sensor (e.g., \"temperature\", \"humidity\", \"pressure\")\n" +
+        " * @property {number} value - The numerical reading from the sensor\n" +
+        " * @property {string} unit - Unit of measurement (e.g., \"C\", \"%\", \"hPa\")\n" +
+        " * \n" +
+        " * @typedef {Object} SensorData\n" +
+        " * @property {string} deviceId - Unique identifier for the sensor device\n" +
+        " * @property {number} timestamp - Unix timestamp of when readings were collected\n" +
+        " * @property {SensorReading[]} readings - Array of sensor readings\n" +
+        " * \n" +
+        " * @typedef {Object} CompressedResult\n" +
+        " * @property {string} deviceId - Original device identifier\n" +
+        " * @property {number} timestamp - Original timestamp\n" +
+        " * @property {string} compressedData - BWT and RLE compressed data string\n" +
+        " * @property {number} bwtIndex - Index needed for BWT decompression\n" +
+        " * @property {number} originalSize - Size in bytes of the original data\n" +
+        " * @property {number} compressedSize - Size in bytes of the compressed data\n" +
+        " * @property {string} compressionRatio - Ratio of compressed to original size as percentage\n" +
+        " * @property {string[]} sensorTypes - Types of sensors in the original data\n" +
+        " * @property {number} readingCount - Number of readings in the original data\n" +
+        " * \n" +
+        " * Implements a Burrows-Wheeler Transform with Run-Length Encoding for efficient\n" +
+        " * compression of sensor data. Optimizes for time-series data patterns common in IoT sensors.\n" +
+        " * Complete the function to handle real-time sensor data compression efficiently.\n" +
+        " * \n" +
+        " * @param {SensorData} sensorData - Object containing sensor device data and readings\n" +
+        " * @returns {CompressedResult} Compressed data and metadata\n" +
+        " * \n" +
+        " * @throws {Error} \"Invalid sensor data format\" - If input is missing required properties\n" +
+        " * @throws {TypeError} \"Invalid sensor reading value\" - If readings contain non-numeric values\n" +
+        " * @throws {Error} \"Empty readings array\" - If no sensor readings are provided\n" +
+        " * \n" +
+        " * Remember to wrap the final code in a code block\n" +
+        " */" +
+        "```bash\n" +
+        "✓ compresses valid sensor data and returns correct result structure\n" +
+        "✓ achieves better compression with repeating data patterns\n" +
+        "✓ throws error for invalid sensor data format\n" +
+        "✓ throws error for invalid sensor reading values\n" +
+        "✓ throws error for empty readings array\n" +
+        "✓ produces consistent results for identical inputs\n" +
+        "✓ calculates compression ratio correctly\n" +
+        "✓ handles large datasets without excessive runtime\n" +
+        "✓ correctly identifies all sensor types in the data\n" +
+        "✓ handles single reading correctly\n" +
+        "✓ handles extremely large sensor values\n" +
+        "```\n" +
+        "Good Answer: \n" +
+        "-------------------------------------------------------------------\n" +
+        "The provided code satisfied the prompt requirement of providing a working Burrows-Wheeler implementation, optimize to" +
+        "handle time-series data pattern, as well as handing multiple edge cases regarding in valid sensor data format or" +
+        "invalid sensor reading values.\n" +
+        "\n\n\n" +
+        "EXAMPLE 2:\n" +
+        "Prompt and stack trace: \n" +
+        "-------------------------------------------------------------------\n" +
+        "def calculate_modular_inverse(a: int, m: int) -> tuple[int, list[int]]:\n" +
+        "    \"\"\"\n" +
+        "    Task: Generate a Python implementation for modular multiplicative inverse using Extended Euclidean Algorithm\n" +
+        "    that returns both the inverse and the key intermediate values.\n" +
+        "\n" +
+        "    Requirements:\n" +
+        "    - Main entry point function should calculate modular inverse\n" +
+        "    - Must return a tuple containing:\n" +
+        "        * The modular inverse as first element\n" +
+        "        * List of intermediate remainders from the Extended Euclidean steps\n" +
+        "    - Support functions should handle Extended Euclidean Algorithm computation\n" +
+        "    - Must optimize for space and time complexity\n" +
+        "    - List of intermediate remainders must start with larger input number and remain in descending order\n" +
+        "    \n" +
+        "    Edge cases to handle:\n" +
+        "    - Non-coprime inputs \n" +
+        "    - Zero input\n" +
+        "    - Negative numbers (normalize and handle signs for both input and modulus, even negative moduli)\n" +
+        "    - Large numbers (implement overflow protection)\n" +
+        "    \n" +
+        "    Additional notes:\n" +
+        "    - Track key intermediate values for debugging\n" +
+        "    - Verify final result satisfies modular inverse property\n" +
+        "    - Return value must be smallest positive representation\n" +
+        "    - Wrap the result in a code block\n" +
+        "    \"\"\"" +
 
-    "============================= test session starts ==============================\n" +
-    "platform darwin -- Python 3.14.0a1, pytest-8.3.4, pluggy-1.5.0 -- /Library/Frameworks/Python.framework/Versions/3.14/bin/python3.14\n" +
-    "cachedir: .pytest_cache\n" +
-    "rootdir: /Users/cuongnguyen/Downloads/metacodebench/python\n" +
-    "collecting ... collected 9 items\n" +
-    "\n" +
-    "1157680/test.py::TestModularInverse::test_basic_cases PASSED             [ 11%]\n" +
-    "1157680/test.py::TestModularInverse::test_coprime_numbers PASSED         [ 22%]\n" +
-    "1157680/test.py::TestModularInverse::test_edge_modulo_one PASSED         [ 33%]\n" +
-    "1157680/test.py::TestModularInverse::test_intermediate_values FAILED     [ 44%]\n" +
-    "1157680/test.py::TestModularInverse::test_large_numbers PASSED           [ 55%]\n" +
-    "1157680/test.py::TestModularInverse::test_negative_numbers FAILED        [ 66%]\n" +
-    "1157680/test.py::TestModularInverse::test_non_coprime_inputs PASSED      [ 77%]\n" +
-    "1157680/test.py::TestModularInverse::test_result_range PASSED            [ 88%]\n" +
-    "1157680/test.py::TestModularInverse::test_zero_input PASSED              [100%]\n" +
-    "\n" +
-    "=================================== FAILURES ===================================\n" +
-    "_________________ TestModularInverse.test_intermediate_values __________________\n" +
-    "\n" +
-    "self = <test.TestModularInverse testMethod=test_intermediate_values>\n" +
-    "\n" +
-    "    def test_intermediate_values(self):\n" +
-    "       \"\"\"Test the intermediate steps returned by the algorithm\"\"\"\n" +
-    "       result, steps = calculate_modular_inverse(3, 7)\n" +
-    "    \n" +
-    "       # Verify steps is a non-empty list\n" +
-    "       self.assertIsInstance(steps, list)\n" +
-    "       self.assertGreater(len(steps), 0)\n" +
-    "    \n" +
-    "       # Verify all steps are integers\n" +
-    "       self.assertTrue(all(isinstance(x, int) for x in steps))\n" +
-    "    \n" +
-    "       # First step should be the larger input number\n" +
-    ">      self.assertEqual(steps[0], max(3, 7))\n" +
-    "E      AssertionError: 3 != 7\n" +
-    "\n" +
-    "1157680/test.py:75: AssertionError\n" +
-    "___________________ TestModularInverse.test_negative_numbers ___________________\n" +
-    "\n" +
-    "self = <test.TestModularInverse testMethod=test_negative_numbers>\n" +
-    "\n" +
-    "    def test_negative_numbers(self):\n" +
-    "       \"\"\"Test handling of negative inputs\"\"\"\n" +
-    "       # Test negative first parameter\n" +
-    "       result, steps = calculate_modular_inverse(-3, 7)\n" +
-    "       self.assertEqual(result, 2)  # Should normalize to positive result\n" +
-    "    \n" +
-    "       # Test both negative parameters\n" +
-    ">      result, steps = calculate_modular_inverse(-3, -7)\n" +
-    "\n" +
-    "1157680/test.py:36: \n" +
-    "_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n" +
-    "\n" +
-    "a = -3, m = 7\n" +
-    "\n" +
-    "    def calculate_modular_inverse(a: int, m: int) -> tuple[int, list[int]]:\n" +
-    "        \"\"\"\n" +
-    "        Calculate the modular multiplicative inverse of a modulo m using the Extended Euclidean Algorithm.\n" +
-    "        Returns a tuple containing the modular inverse and a list of intermediate remainders.\n" +
-    "        \"\"\"\n" +
-    "        # Normalize inputs to handle negative numbers\n" +
-    "        a = a % m\n" +
-    "        m = abs(m)  # Modulus must be positive\n" +
-    "    \n" +
-    "        # Handle edge cases\n" +
-    "        if a == 0:\n" +
-    "            raise ValueError(\"Modular inverse does not exist for zero input.\")\n" +
-    "        if m == 0:\n" +
-    "            raise ValueError(\"Modulus cannot be zero.\")\n" +
-    "    \n" +
-    "        # Compute gcd and coefficients\n" +
-    "        gcd, x, _, remainders = extended_gcd(a, m)\n" +
-    "    \n" +
-    "        # Check if a and m are coprime\n" +
-    "        if gcd != 1:\n" +
-    ">           raise ValueError(f\"Modular inverse does not exist for non-coprime inputs: gcd({a}, {m}) = {gcd}.\")\n" +
-    "E           ValueError: Modular inverse does not exist for non-coprime inputs: gcd(-3, 7) = -1.\n" +
-    "\n" +
-    "1157680/solution.py:42: ValueError\n" +
-    "=========================== short test summary info ============================\n" +
-    "FAILED 1157680/test.py::TestModularInverse::test_intermediate_values - Assert...\n" +
-    "FAILED 1157680/test.py::TestModularInverse::test_negative_numbers - ValueErro...\n" +
-    "========================= 2 failed, 7 passed in 0.02s ==========================\n" +
-    "Good Answer: \n" +
-    "-------------------------------------------------------------------\n" +
-    "The provided code satisfied some of the the prompt requirements, like handling basic case, co-prime input and zero input. " +
-    "However, it failed to handle test cases regarding negative numbers and intermediate values. So overall, unit test is not passed" +
-    "-------------------------------------------------------------------\n"
+        "============================= test session starts ==============================\n" +
+        "platform darwin -- Python 3.14.0a1, pytest-8.3.4, pluggy-1.5.0 -- /Library/Frameworks/Python.framework/Versions/3.14/bin/python3.14\n" +
+        "cachedir: .pytest_cache\n" +
+        "rootdir: /Users/cuongnguyen/Downloads/metacodebench/python\n" +
+        "collecting ... collected 9 items\n" +
+        "\n" +
+        "1157680/test.py::TestModularInverse::test_basic_cases PASSED             [ 11%]\n" +
+        "1157680/test.py::TestModularInverse::test_coprime_numbers PASSED         [ 22%]\n" +
+        "1157680/test.py::TestModularInverse::test_edge_modulo_one PASSED         [ 33%]\n" +
+        "1157680/test.py::TestModularInverse::test_intermediate_values FAILED     [ 44%]\n" +
+        "1157680/test.py::TestModularInverse::test_large_numbers PASSED           [ 55%]\n" +
+        "1157680/test.py::TestModularInverse::test_negative_numbers FAILED        [ 66%]\n" +
+        "1157680/test.py::TestModularInverse::test_non_coprime_inputs PASSED      [ 77%]\n" +
+        "1157680/test.py::TestModularInverse::test_result_range PASSED            [ 88%]\n" +
+        "1157680/test.py::TestModularInverse::test_zero_input PASSED              [100%]\n" +
+        "\n" +
+        "=================================== FAILURES ===================================\n" +
+        "_________________ TestModularInverse.test_intermediate_values __________________\n" +
+        "\n" +
+        "self = <test.TestModularInverse testMethod=test_intermediate_values>\n" +
+        "\n" +
+        "    def test_intermediate_values(self):\n" +
+        "       \"\"\"Test the intermediate steps returned by the algorithm\"\"\"\n" +
+        "       result, steps = calculate_modular_inverse(3, 7)\n" +
+        "    \n" +
+        "       # Verify steps is a non-empty list\n" +
+        "       self.assertIsInstance(steps, list)\n" +
+        "       self.assertGreater(len(steps), 0)\n" +
+        "    \n" +
+        "       # Verify all steps are integers\n" +
+        "       self.assertTrue(all(isinstance(x, int) for x in steps))\n" +
+        "    \n" +
+        "       # First step should be the larger input number\n" +
+        ">      self.assertEqual(steps[0], max(3, 7))\n" +
+        "E      AssertionError: 3 != 7\n" +
+        "\n" +
+        "1157680/test.py:75: AssertionError\n" +
+        "___________________ TestModularInverse.test_negative_numbers ___________________\n" +
+        "\n" +
+        "self = <test.TestModularInverse testMethod=test_negative_numbers>\n" +
+        "\n" +
+        "    def test_negative_numbers(self):\n" +
+        "       \"\"\"Test handling of negative inputs\"\"\"\n" +
+        "       # Test negative first parameter\n" +
+        "       result, steps = calculate_modular_inverse(-3, 7)\n" +
+        "       self.assertEqual(result, 2)  # Should normalize to positive result\n" +
+        "    \n" +
+        "       # Test both negative parameters\n" +
+        ">      result, steps = calculate_modular_inverse(-3, -7)\n" +
+        "\n" +
+        "1157680/test.py:36: \n" +
+        "_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n" +
+        "\n" +
+        "a = -3, m = 7\n" +
+        "\n" +
+        "    def calculate_modular_inverse(a: int, m: int) -> tuple[int, list[int]]:\n" +
+        "        \"\"\"\n" +
+        "        Calculate the modular multiplicative inverse of a modulo m using the Extended Euclidean Algorithm.\n" +
+        "        Returns a tuple containing the modular inverse and a list of intermediate remainders.\n" +
+        "        \"\"\"\n" +
+        "        # Normalize inputs to handle negative numbers\n" +
+        "        a = a % m\n" +
+        "        m = abs(m)  # Modulus must be positive\n" +
+        "    \n" +
+        "        # Handle edge cases\n" +
+        "        if a == 0:\n" +
+        "            raise ValueError(\"Modular inverse does not exist for zero input.\")\n" +
+        "        if m == 0:\n" +
+        "            raise ValueError(\"Modulus cannot be zero.\")\n" +
+        "    \n" +
+        "        # Compute gcd and coefficients\n" +
+        "        gcd, x, _, remainders = extended_gcd(a, m)\n" +
+        "    \n" +
+        "        # Check if a and m are coprime\n" +
+        "        if gcd != 1:\n" +
+        ">           raise ValueError(f\"Modular inverse does not exist for non-coprime inputs: gcd({a}, {m}) = {gcd}.\")\n" +
+        "E           ValueError: Modular inverse does not exist for non-coprime inputs: gcd(-3, 7) = -1.\n" +
+        "\n" +
+        "1157680/solution.py:42: ValueError\n" +
+        "=========================== short test summary info ============================\n" +
+        "FAILED 1157680/test.py::TestModularInverse::test_intermediate_values - Assert...\n" +
+        "FAILED 1157680/test.py::TestModularInverse::test_negative_numbers - ValueErro...\n" +
+        "========================= 2 failed, 7 passed in 0.02s ==========================\n" +
+        "Good Answer: \n" +
+        "-------------------------------------------------------------------\n" +
+        "The provided code satisfied some of the the prompt requirements, like handling basic case, co-prime input and zero input. " +
+        "However, it failed to handle test cases regarding negative numbers and intermediate values. So overall, unit test is not passed" +
+        "-------------------------------------------------------------------\n"
 }
