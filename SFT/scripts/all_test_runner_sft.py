@@ -180,7 +180,6 @@ def run_js_file(filepath):
     except subprocess.TimeoutExpired:
         return "TIMEOUT", "Execution timed out."
 
-import os
 
 def handle_python_task(task, task_dir):
     ir_path = os.path.join(task_dir, "ir.py")
@@ -285,6 +284,7 @@ def test_task(task):
 
 
 def process_json(json_list):
+  json_list=json.loads(json_list)
   AllTasks = []
   os.makedirs("all_tasks", exist_ok=True)
   for task in json_list:
