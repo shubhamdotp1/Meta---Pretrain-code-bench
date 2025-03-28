@@ -45,7 +45,7 @@ def extract_notebook_fields_from_path(notebook_path):
         print("✅ Extracted JSON:")
         d = json.dumps(data, indent=4)
         print(d)
-        return data  # ← return as dict (not string)
+        return d
     else:
         print("⚠️ No filled fields found — did you fill them in yet?")
         return {}
