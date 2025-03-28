@@ -11,7 +11,7 @@ def extract_notebook_fields_from_path(notebook_path):
         notebook_path (str): Full path to the notebook file.
 
     Returns:
-        dict: Extracted field-value pairs.
+        dict: Extracted field-value pairs (with formatting preserved).
     """
     # ✅ Confirm path exists
     if not os.path.exists(notebook_path):
@@ -34,18 +34,18 @@ def extract_notebook_fields_from_path(notebook_path):
 
     for cell in nb["cells"]:
         if cell["cell_type"] == "markdown":
-            content = cell["source"].strip()
+            content = cell["source"]  # Do NOT strip
             if content.startswith("### ") and content[4:].strip() in fields:
-                last_field = content[4:].strip()
+                last_field = content[4:].strip()  # Strip only the field name
             elif last_field and not content.startswith("# Put"):
-                data[last_field] = content.strip()
+                data[last_field] = content  # Preserve full formatting
                 last_field = None
 
     if data:
         print("✅ Extracted JSON:")
-        d=json.dumps(data, indent=4)
+        d = json.dumps(data, indent=4)
         print(d)
+        return data  # ← return as dict (not string)
     else:
         print("⚠️ No filled fields found — did you fill them in yet?")
-
-    return d
+        return {}
